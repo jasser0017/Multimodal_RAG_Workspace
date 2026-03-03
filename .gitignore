@@ -1,5 +1,6 @@
 # ------env-----
 *.env.example
+.env
 #--------python-------
 __pycahe__/
 venv/
