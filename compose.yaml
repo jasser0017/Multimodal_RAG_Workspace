@@ -25,6 +25,54 @@ services:
     volumes:
       - ollama_data:/root/.ollama
 
+  litellm:
+    image: ghcr.io/berriai/litellm:main
+    container_name: rag_litellm
+    ports:
+      - '4000:4000'
+    volumes:
+      - ./infra/litellm/config.yaml:/app/config.yaml:ro
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+
+    container_name: rag_api
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      LITELLM_URL: ${LITELLM_URL}
+      OLLAMA_URL: ${OLLAMA_URL}
+    ports:
+      - '8000:8000'
+    volumes:
+      - ./apps/api:/app
+    command: ['uvicorn', 'app.main:app', '--port=8000', '--reload']
+
+    depends_on:
+      - db
+      - redis
+      - litellm
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: rag_web
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./apps/web:/app
+      - web_node_modules:/app/node_modules
+    command: ['npm', 'run', 'dev', '--', '-p', '3000']
+    depends_on:
+      - api
+
 volumes:
   db_data:
   ollama_data:
+  web_node_modules:
